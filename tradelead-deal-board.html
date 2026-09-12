@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TradeLead Systems — Deal Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A1929;
+    --panel:#0F2439;
+    --panel-2:#14304A;
+    --panel-3:#0C1E30;
+    --line:rgba(122,178,209,0.16);
+    --line-strong:rgba(122,178,209,0.30);
+    --cyan:#5FC7E8;
+    --cyan-soft:rgba(95,199,232,0.12);
+    --amber:#F0A860;
+    --amber-soft:rgba(240,168,96,0.14);
+    --rust:#E2604A;
+    --rust-soft:rgba(226,96,74,0.14);
+    --green:#7FD1A0;
+    --green-soft:rgba(127,209,160,0.14);
+    --text:#E7F1F8;
+    --text-dim:#8AA4BC;
+    --text-faint:#54697D;
+    --radius:3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background-color:var(--bg);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px),
+      linear-gradient(var(--line-strong) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line-strong) 1px, transparent 1px);
+    background-size:24px 24px, 24px 24px, 120px 120px, 120px 120px;
+    background-position:-1px -1px;
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk', sans-serif;}
+
+  /* header */
+  header{
+    position:sticky; top:0; z-index:30;
+    background:rgba(10,25,41,0.92);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line-strong);
+    padding:18px 26px 0 26px;
+  }
+  .header-top{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:20px;
+    flex-wrap:wrap;
+    position:relative;
+    padding-bottom:16px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand svg{flex-shrink:0;}
+  .brand-text h1{font-size:19px; font-weight:700; margin:0; letter-spacing:0.2px;}
+  .brand-text p{font-size:11px; color:var(--text-dim); margin:3px 0 0 0; letter-spacing:0.3px;}
+  .header-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .search-box{
+    display:flex; align-items:center; gap:7px;
+    background:var(--panel-3); border:1px solid var(--line-strong); border-radius:var(--radius);
+    padding:7px 10px; min-width:200px;
+  }
+  .search-box input{
+    background:transparent; border:none; outline:none; color:var(--text);
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; width:100%;
+  }
+  .search-box input::placeholder{color:var(--text-faint);}
+  .btn{
+    font-family:'IBM Plex Mono', monospace; font-size:12.5px; font-weight:500;
+    border-radius:var(--radius); border:1px solid var(--line-strong);
+    padding:8px 14px; cursor:pointer; background:var(--panel-2); color:var(--text);
+    display:inline-flex; align-items:center; gap:7px; transition:border-color .15s, background .15s;
+  }
+  .btn:hover{border-color:var(--cyan);}
+  .btn-primary{
+    background:var(--amber-soft); border-color:var(--amber); color:var(--amber);
+    font-weight:600;
+  }
+  .btn-primary:hover{background:var(--amber); color:#1a1100;}
+  .btn-ghost{background:transparent; border:1px dashed var(--line-strong); color:var(--text-dim);}
+  .btn-ghost:hover{border-color:var(--cyan); color:var(--cyan);}
+  .btn-danger{color:var(--rust); border-color:var(--rust); background:transparent;}
+  .btn-danger:hover{background:var(--rust-soft);}
+
+  /* corner marks - one deliberate moment, header only */
+  .header-top::before, .header-top::after{
+    content:""; position:absolute; width:14px; height:14px; opacity:0.55;
+  }
+  .header-top::before{ top:-2px; left:-26px; border-left:1px solid var(--cyan); border-top:1px solid var(--cyan); }
+  .header-top::after{ top:-2px; right:-26px; border-right:1px solid var(--cyan); border-top:1px solid var(--cyan); }
+
+  .stats-row{
+    display:flex; gap:0; padding:14px 0 16px 0; flex-wrap:wrap;
+  }
+  .stat{
+    padding:0 24px; border-left:1px dashed var(--line-strong);
+  }
+  .stat:first-child{border-left:none; padding-left:0;}
+  .stat .num{font-family:'Space Grotesk', sans-serif; font-size:22px; font-weight:700; color:var(--cyan); line-height:1.1;}
+  .stat.won .num{color:var(--green);}
+  .stat.rate .num{color:var(--amber);}
+  .stat .lbl{font-size:11px; color:var(--text-dim); margin-top:3px;}
+
+  /* board */
+  #board{
+    display:flex; gap:16px; padding:22px 26px 40px 26px; overflow-x:auto; align-items:flex-start;
+  }
+  .column{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    width:296px; flex-shrink:0;
+    display:flex; flex-direction:column; max-height:calc(100vh - 210px);
+  }
+  .column.drag-over{border-color:var(--cyan);}
+  .col-head{
+    padding:13px 14px 11px 14px; border-bottom:1px solid var(--line);
+    display:flex; align-items:center; justify-content:space-between; gap:8px;
+  }
+  .col-head-left{display:flex; align-items:center; gap:9px; min-width:0;}
+  .col-name{font-family:'Space Grotesk',sans-serif; font-size:13.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .col-count{
+    font-size:10.5px; background:var(--panel-2); color:var(--text-dim);
+    border-radius:20px; padding:1px 7px; flex-shrink:0;
+  }
+  .col-sub{font-size:10.5px; color:var(--text-faint); margin-top:2px;}
+  .col-body{
+    padding:10px; overflow-y:auto; flex:1; min-height:60px;
+  }
+  .col-foot{padding:10px;}
+  .empty-slot{
+    border:1px dashed var(--line); border-radius:var(--radius); color:var(--text-faint);
+    font-size:11.5px; text-align:center; padding:16px 8px; margin-bottom:8px;
+  }
+
+  /* cards */
+  .card{
+    background:var(--panel-2); border:1px solid var(--line);
+    border-radius:var(--radius); padding:11px 12px; margin-bottom:9px;
+    cursor:grab; position:relative; transition:border-color .15s, transform .1s;
+  }
+  .card:hover{border-color:var(--cyan);}
+  .card.dragging{opacity:0.4;}
+  .card-name{font-family:'Space Grotesk',sans-serif; font-size:13.5px; font-weight:600; margin:0 0 5px 0; word-break:break-word;}
+  .card-meta{font-size:10.5px; color:var(--text-dim); margin-bottom:6px;}
+  .card-row{display:flex; align-items:center; gap:6px; font-size:10.5px; color:var(--text-dim); margin-bottom:4px;}
+  .card-row svg{flex-shrink:0; opacity:0.8;}
+  .chip{
+    display:inline-flex; align-items:center; font-size:10.5px; border-radius:20px; padding:2px 8px; margin-top:2px;
+  }
+  .chip-value{background:var(--cyan-soft); color:var(--cyan);}
+  .card-notes{font-size:10.5px; color:var(--text-faint); font-style:italic; margin-top:6px; overflow:hidden; text-overflow:ellipsis; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
+  .card-foot{display:flex; align-items:center; justify-content:space-between; margin-top:8px;}
+  .age-flag{font-size:10px; color:var(--rust); display:flex; align-items:center; gap:4px;}
+  .move-controls{display:flex; gap:4px;}
+  .move-btn{
+    background:var(--panel-3); border:1px solid var(--line); color:var(--text-dim);
+    border-radius:var(--radius); width:20px; height:20px; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; font-size:11px; line-height:1;
+  }
+  .move-btn:hover{border-color:var(--cyan); color:var(--cyan);}
+  .move-btn:disabled{opacity:0.25; cursor:default;}
+  .move-btn:disabled:hover{border-color:var(--line); color:var(--text-dim);}
+  .won-stamp{
+    position:absolute; top:8px; right:8px; font-size:9px; color:var(--green);
+    border:1px solid var(--green); border-radius:20px; padding:1px 7px; transform:rotate(-4deg); opacity:0.85;
+  }
+  .lost-stamp{
+    position:absolute; top:8px; right:8px; font-size:9px; color:var(--text-faint);
+    border:1px solid var(--text-faint); border-radius:20px; padding:1px 7px; transform:rotate(-4deg); opacity:0.85;
+  }
+
+  /* modal */
+  .overlay{
+    position:fixed; inset:0; background:rgba(6,15,25,0.72); backdrop-filter:blur(2px);
+    display:flex; align-items:center; justify-content:center; z-index:100; padding:20px;
+  }
+  .hidden{display:none !important;}
+  .modal{
+    background:var(--panel); border:1px solid var(--line-strong); border-radius:var(--radius);
+    width:100%; max-width:440px; max-height:88vh; overflow-y:auto; padding:22px;
+  }
+  .modal h2{font-size:16px; margin:0 0 16px 0;}
+  .field{margin-bottom:13px;}
+  .field label{display:block; font-size:10.5px; color:var(--text-dim); margin-bottom:5px; letter-spacing:0.2px;}
+  .field input, .field select, .field textarea{
+    width:100%; background:var(--panel-3); border:1px solid var(--line-strong); border-radius:var(--radius);
+    color:var(--text); font-family:'IBM Plex Mono', monospace; font-size:12.5px; padding:8px 10px; outline:none;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus{border-color:var(--cyan);}
+  .field textarea{resize:vertical; min-height:60px;}
+  .field-row{display:flex; gap:10px;}
+  .field-row .field{flex:1;}
+  .modal-foot{display:flex; align-items:center; justify-content:space-between; margin-top:18px; gap:10px;}
+  .modal-foot-right{display:flex; gap:8px;}
+
+  ::-webkit-scrollbar{height:8px; width:8px;}
+  ::-webkit-scrollbar-thumb{background:var(--line-strong); border-radius:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+
+  @media (max-width:640px){
+    header{padding:14px 16px 0 16px;}
+    #board{padding:16px 16px 30px 16px;}
+    .header-top::before, .header-top::after{display:none;}
+    .stats-row{gap:0;}
+    .stat{padding:0 14px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-top">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+        <circle cx="15" cy="15" r="11" stroke="#5FC7E8" stroke-width="1.4"/>
+        <line x1="15" y1="2" x2="15" y2="6" stroke="#5FC7E8" stroke-width="1.4"/>
+        <line x1="15" y1="24" x2="15" y2="28" stroke="#5FC7E8" stroke-width="1.4"/>
+        <line x1="2" y1="15" x2="6" y2="15" stroke="#5FC7E8" stroke-width="1.4"/>
+        <line x1="24" y1="15" x2="28" y2="15" stroke="#5FC7E8" stroke-width="1.4"/>
+        <circle cx="15" cy="15" r="2.4" fill="#F0A860"/>
+      </svg>
+      <div class="brand-text">
+        <h1>TradeLead Systems</h1>
+        <p>Outreach &amp; spec-site pipeline — Winnipeg / Vancouver</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div class="search-box">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#8AA4BC" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="searchInput" type="text" placeholder="Search business, city, industry…">
+      </div>
+      <button class="btn btn-primary" id="addLeadBtn">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add lead
+      </button>
+    </div>
+  </div>
+  <div class="stats-row">
+    <div class="stat">
+      <div class="num" id="statActive">0</div>
+      <div class="lbl">Active leads</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="statPipeline">$0</div>
+      <div class="lbl">Active pipeline value</div>
+    </div>
+    <div class="stat won">
+      <div class="num" id="statWon">0</div>
+      <div class="lbl">Closed won <span id="statWonValue"></span></div>
+    </div>
+    <div class="stat rate">
+      <div class="num" id="statRate">—</div>
+      <div class="lbl">Win rate</div>
+    </div>
+  </div>
+</header>
+
+<div id="board"></div>
+
+<!-- Modal -->
+<div class="overlay hidden" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">Add lead</h2>
+    <div class="field">
+      <label>Business name</label>
+      <input id="fName" type="text" placeholder="e.g. Save On Heating &amp; Cooling">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Industry</label>
+        <input id="fIndustry" type="text" list="industryList" placeholder="e.g. HVAC Contractor">
+        <datalist id="industryList">
+          <option value="HVAC Contractor">
+          <option value="Hair Salon">
+          <option value="Barbershop">
+          <option value="Restaurant">
+          <option value="Auto Electrical Shop">
+          <option value="Tattoo &amp; Piercing Studio">
+          <option value="Day Spa &amp; Nail Salon">
+        </datalist>
+      </div>
+      <div class="field">
+        <label>City / market</label>
+        <input id="fCity" type="text" list="cityList" placeholder="e.g. Winnipeg, MB">
+        <datalist id="cityList">
+          <option value="Winnipeg, MB">
+          <option value="Vancouver, BC">
+        </datalist>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Phone</label>
+        <input id="fPhone" type="text" placeholder="(___) ___-____">
+      </div>
+      <div class="field">
+        <label>Deal value ($)</label>
+        <input id="fValue" type="number" min="0" step="1" placeholder="0">
+      </div>
+    </div>
+    <div class="field">
+      <label>Spec site URL</label>
+      <input id="fSite" type="text" placeholder="https://…">
+    </div>
+    <div class="field">
+      <label>Stage</label>
+      <select id="fStage"></select>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="fNotes" placeholder="Call notes, objections, next step…"></textarea>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-danger hidden" id="deleteBtn">Delete</button>
+      <div class="modal-foot-right">
+        <button class="btn" id="cancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="saveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STORAGE_KEY = 'tradelead-board-v1';
+
+  const STAGES = [
+    { id:'target',      name:'Target List',      sub:'Identified, no site yet' },
+    { id:'specbuilt',    name:'Spec Site Built',  sub:'Site live, ready to pitch' },
+    { id:'outreach',     name:'Outreach Sent',    sub:'Cold call / follow-up made', ageLimit:5 },
+    { id:'interested',   name:'Interested',       sub:'Warm, awaiting decision',    ageLimit:7 },
+    { id:'negotiating',  name:'Negotiating',      sub:'Price / terms discussion',   ageLimit:10 },
+    { id:'won',          name:'Closed – Won',     sub:'Sold' },
+    { id:'lost',         name:'Lost',             sub:'Not interested / dead' }
+  ];
+
+  function seedData(){
+    const now = Date.now();
+    const mk = (name, industry, city, notes) => ({
+      id: 'c' + Math.random().toString(36).slice(2, 10),
+      name, industry, city,
+      phone: '', site: '', value: '',
+      notes: notes || '',
+      stage: 'specbuilt',
+      createdAt: now,
+      stageChangedAt: now
+    });
+    return [
+      mk('Ace Innks and Piercings', 'Tattoo & Piercing Studio', 'Winnipeg, MB'),
+      mk('Hair 2 Envy By Tiziana & Co', 'Hair Salon', 'Winnipeg, MB', '1465 Main St'),
+      mk('Harmony Hair & Co', 'Hair Salon', 'Winnipeg, MB'),
+      mk('Jolly Mug Restaurant', 'Restaurant', 'St. Vital, Winnipeg, MB'),
+      mk('North Main Auto Electric Ltd', 'Auto Electrical Shop', 'West Saint Paul, MB'),
+      mk('Pyramid Heating and Air Conditioning', 'HVAC Contractor', 'Winnipeg, MB'),
+      mk('Quality Heating and Cooling', 'HVAC Contractor', 'Winnipeg, MB'),
+      mk('QualityCuts Hair Studio', 'Barbershop', 'Winnipeg, MB'),
+      mk('Revive Air Heating & Cooling Inc', 'HVAC Contractor', 'Metro Vancouver, BC'),
+      mk('Shiny Barbershop', 'Barbershop / Hair Salon', 'Downtown Vancouver, BC', 'Hudson Mall'),
+      mk('ThyThy Beauty Spa', 'Day Spa & Nail Salon', 'Winnipeg, MB'),
+      mk('Top End Barbers', 'Barbershop', 'Kitsilano, Vancouver, BC'),
+      mk('Save On Heating & Cooling', 'HVAC Contractor', 'Winnipeg, MB')
+    ];
+  }
+
+  let cards = [];
+  let saveTimer = null;
+  let editingId = null;
+  let dragId = null;
+  let saveOk = true;
+
+  function debSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        const res = await window.storage.set(STORAGE_KEY, JSON.stringify(cards), false);
+        saveOk = !!res;
+      } catch(e){
+        saveOk = false;
+        console.error('Storage save failed', e);
+      }
+    }, 350);
+  }
+
+  async function load(){
+    try {
+      const res = await window.storage.get(STORAGE_KEY, false);
+      if (res && res.value) {
+        cards = JSON.parse(res.value);
+      } else {
+        cards = seedData();
+        debSave();
+      }
+    } catch(e){
+      cards = seedData();
+    }
+    render();
+  }
+
+  function escapeHtml(s){
+    return String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  function fmtMoney(n){
+    n = Number(n) || 0;
+    return '$' + n.toLocaleString('en-US', {maximumFractionDigits:0});
+  }
+
+  function daysSince(ts){
+    return Math.floor((Date.now() - ts) / 86400000);
+  }
+
+  function svgPhone(){ return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.36 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.34 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'; }
+  function svgLink(){ return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'; }
+  function svgClock(){ return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'; }
+
+  function matches(card, q){
+    if (!q) return true;
+    q = q.toLowerCase();
+    return (card.name||'').toLowerCase().includes(q) ||
+           (card.industry||'').toLowerCase().includes(q) ||
+           (card.city||'').toLowerCase().includes(q);
+  }
+
+  function renderStats(filtered){
+    const active = cards.filter(c => c.stage !== 'won' && c.stage !== 'lost');
+    const won = cards.filter(c => c.stage === 'won');
+    const lost = cards.filter(c => c.stage === 'lost');
+    const pipelineValue = active.reduce((s,c) => s + (Number(c.value)||0), 0);
+    const wonValue = won.reduce((s,c) => s + (Number(c.value)||0), 0);
+    document.getElementById('statActive').textContent = active.length;
+    document.getElementById('statPipeline').textContent = fmtMoney(pipelineValue);
+    document.getElementById('statWon').textContent = won.length;
+    document.getElementById('statWonValue').textContent = won.length ? '· ' + fmtMoney(wonValue) : '';
+    const denom = won.length + lost.length;
+    document.getElementById('statRate').textContent = denom ? Math.round(won.length/denom*100) + '%' : '—';
+  }
+
+  function cardHtml(card, idx, stageIdx){
+    const stage = STAGES[stageIdx];
+    const age = daysSince(card.stageChangedAt);
+    const overdue = stage.ageLimit && age >= stage.ageLimit;
+    let stamp = '';
+    if (card.stage === 'won') stamp = '<div class="won-stamp">SOLD</div>';
+    if (card.stage === 'lost') stamp = '<div class="lost-stamp">DEAD</div>';
+    return `
+      <div class="card" draggable="true" data-id="${card.id}">
+        ${stamp}
+        <p class="card-name">${escapeHtml(card.name)}</p>
+        <div class="card-meta">${escapeHtml(card.industry || '—')} · ${escapeHtml(card.city || '—')}</div>
+        ${card.phone ? `<div class="card-row">${svgPhone()} ${escapeHtml(card.phone)}</div>` : ''}
+        ${card.site ? `<div class="card-row">${svgLink()} ${escapeHtml(card.site)}</div>` : ''}
+        ${card.value ? `<span class="chip chip-value">${fmtMoney(card.value)}</span>` : ''}
+        ${card.notes ? `<div class="card-notes">${escapeHtml(card.notes)}</div>` : ''}
+        <div class="card-foot">
+          ${overdue ? `<div class="age-flag">${svgClock()} ${age}d in stage</div>` : '<div></div>'}
+          <div class="move-controls">
+            <button class="move-btn" data-move="prev" data-id="${card.id}" ${stageIdx===0?'disabled':''} title="Move back">‹</button>
+            <button class="move-btn" data-move="next" data-id="${card.id}" ${stageIdx===STAGES.length-1?'disabled':''} title="Move forward">›</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function render(){
+    const q = document.getElementById('searchInput').value.trim();
+    const board = document.getElementById('board');
+    board.innerHTML = '';
+    renderStats();
+
+    STAGES.forEach((stage, stageIdx) => {
+      const stageCards = cards.filter(c => c.stage === stage.id && matches(c, q));
+      const subtotal = stageCards.reduce((s,c) => s + (Number(c.value)||0), 0);
+
+      const col = document.createElement('div');
+      col.className = 'column';
+      col.dataset.stage = stage.id;
+
+      col.innerHTML = `
+        <div class="col-head">
+          <div class="col-head-left">
+            <div>
+              <div class="col-name">${escapeHtml(stage.name)}</div>
+              <div class="col-sub">${escapeHtml(stage.sub)}${subtotal ? ' · ' + fmtMoney(subtotal) : ''}</div>
+            </div>
+          </div>
+          <span class="col-count">${stageCards.length}</span>
+        </div>
+        <div class="col-body" data-stage="${stage.id}">
+          ${stageCards.length ? stageCards.map(c => cardHtml(c, 0, stageIdx)).join('') : `<div class="empty-slot">No leads here${q ? ' matching search' : ' yet'}</div>`}
+        </div>
+        <div class="col-foot">
+          <button class="btn btn-ghost" style="width:100%; justify-content:center;" data-add-to="${stage.id}">+ Add lead</button>
+        </div>
+      `;
+      board.appendChild(col);
+    });
+
+    attachCardEvents();
+    attachColumnDnD();
+    document.querySelectorAll('[data-add-to]').forEach(btn => {
+      btn.addEventListener('click', () => openModal(null, btn.dataset.addTo));
+    });
+  }
+
+  function attachCardEvents(){
+    document.querySelectorAll('.card').forEach(el => {
+      el.addEventListener('click', (e) => {
+        if (e.target.closest('.move-btn')) return;
+        openModal(el.dataset.id);
+      });
+      el.addEventListener('dragstart', () => {
+        dragId = el.dataset.id;
+        el.classList.add('dragging');
+      });
+      el.addEventListener('dragend', () => el.classList.remove('dragging'));
+    });
+    document.querySelectorAll('.move-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        const dir = btn.dataset.move;
+        const card = cards.find(c => c.id === id);
+        if (!card) return;
+        const idx = STAGES.findIndex(s => s.id === card.stage);
+        const newIdx = dir === 'next' ? Math.min(idx+1, STAGES.length-1) : Math.max(idx-1, 0);
+        if (newIdx !== idx){
+          card.stage = STAGES[newIdx].id;
+          card.stageChangedAt = Date.now();
+          debSave();
+          render();
+        }
+      });
+    });
+  }
+
+  function attachColumnDnD(){
+    document.querySelectorAll('.col-body').forEach(zone => {
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.closest('.column').classList.add('drag-over');
+      });
+      zone.addEventListener('dragleave', () => {
+        zone.closest('.column').classList.remove('drag-over');
+      });
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.closest('.column').classList.remove('drag-over');
+        if (!dragId) return;
+        const card = cards.find(c => c.id === dragId);
+        if (card && card.stage !== zone.dataset.stage){
+          card.stage = zone.dataset.stage;
+          card.stageChangedAt = Date.now();
+          debSave();
+          render();
+        }
+        dragId = null;
+      });
+    });
+  }
+
+  // Modal
+  const overlay = document.getElementById('overlay');
+  const stageSelect = document.getElementById('fStage');
+  STAGES.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id; opt.textContent = s.name;
+    stageSelect.appendChild(opt);
+  });
+
+  function openModal(id, defaultStage){
+    editingId = id;
+    const deleteBtn = document.getElementById('deleteBtn');
+    if (id){
+      const card = cards.find(c => c.id === id);
+      document.getElementById('modalTitle').textContent = 'Edit lead';
+      document.getElementById('fName').value = card.name || '';
+      document.getElementById('fIndustry').value = card.industry || '';
+      document.getElementById('fCity').value = card.city || '';
+      document.getElementById('fPhone').value = card.phone || '';
+      document.getElementById('fValue').value = card.value || '';
+      document.getElementById('fSite').value = card.site || '';
+      document.getElementById('fStage').value = card.stage;
+      document.getElementById('fNotes').value = card.notes || '';
+      deleteBtn.classList.remove('hidden');
+      deleteBtn.textContent = 'Delete';
+    } else {
+      document.getElementById('modalTitle').textContent = 'Add lead';
+      ['fName','fIndustry','fCity','fPhone','fValue','fSite','fNotes'].forEach(id2 => document.getElementById(id2).value = '');
+      document.getElementById('fStage').value = defaultStage || 'target';
+      deleteBtn.classList.add('hidden');
+    }
+    overlay.classList.remove('hidden');
+    document.getElementById('fName').focus();
+  }
+
+  function closeModal(){
+    overlay.classList.add('hidden');
+    editingId = null;
+  }
+
+  document.getElementById('addLeadBtn').addEventListener('click', () => openModal(null, 'target'));
+  document.getElementById('cancelBtn').addEventListener('click', closeModal);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !overlay.classList.contains('hidden')) closeModal(); });
+
+  document.getElementById('saveBtn').addEventListener('click', () => {
+    const name = document.getElementById('fName').value.trim();
+    if (!name){ document.getElementById('fName').focus(); return; }
+    const data = {
+      name,
+      industry: document.getElementById('fIndustry').value.trim(),
+      city: document.getElementById('fCity').value.trim(),
+      phone: document.getElementById('fPhone').value.trim(),
+      value: document.getElementById('fValue').value,
+      site: document.getElementById('fSite').value.trim(),
+      notes: document.getElementById('fNotes').value.trim(),
+      stage: document.getElementById('fStage').value
+    };
+    if (editingId){
+      const card = cards.find(c => c.id === editingId);
+      const stageChanged = card.stage !== data.stage;
+      Object.assign(card, data);
+      if (stageChanged) card.stageChangedAt = Date.now();
+    } else {
+      cards.push({
+        id: 'c' + Math.random().toString(36).slice(2, 10),
+        ...data,
+        createdAt: Date.now(),
+        stageChangedAt: Date.now()
+      });
+    }
+    debSave();
+    closeModal();
+    render();
+  });
+
+  let deleteArmed = false;
+  document.getElementById('deleteBtn').addEventListener('click', function(){
+    if (!deleteArmed){
+      deleteArmed = true;
+      this.textContent = 'Confirm delete?';
+      setTimeout(() => { deleteArmed = false; if (this) this.textContent = 'Delete'; }, 3000);
+      return;
+    }
+    cards = cards.filter(c => c.id !== editingId);
+    deleteArmed = false;
+    debSave();
+    closeModal();
+    render();
+  });
+
+  document.getElementById('searchInput').addEventListener('input', () => render());
+
+  load();
+})();
+</script>
+</body>
+</html>
